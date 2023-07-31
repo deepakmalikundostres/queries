@@ -1,0 +1,54 @@
+
+   const pipeline2 = [
+    {
+      $sort:    
+        {
+          istTimestamp: 1,
+        },
+    },
+    {
+      $project:
+
+        {
+          _id: 1,
+          creatorCoinEarnedDaily: 1,
+        },
+    },
+  ]
+   const docs  = await CreatorEarnSummary.aggregate(pipeline2);
+   
+   const bulkUpdateOps = [];
+
+   if (docs.length) {
+     docs.forEach((doc) => {
+       console.log(doc.creatorCoinEarnedDaily);
+ 
+ 
+       const updateOperation = {
+         updateOne: {
+           filter: {
+             "_id": new ObjectId(doc._id),
+            },
+           update: {
+             $set: {
+               "creatorCoinEarnedDaily2.videoWatch": doc.creatorCoinEarnedDaily
+               ,
+             },
+           },
+           upsert: true,
+         },
+       };
+ 
+       bulkUpdateOps.push(updateOperation);
+      console.log(JSON.stringify(updateOperation));
+     });
+   }
+ 
+  //const result = await CreatorEarnSummary.bulkWrite(bulkUpdateOps);
+  console.log(JSON.stringify(result));
+
+
+  db.creator-earn-summary.updateOne(
+      {} ,
+    { $unset: { creatorCoinEarnedDaily: "" } }
+  )
