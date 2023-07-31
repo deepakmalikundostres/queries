@@ -1,0 +1,44 @@
+
+  
+  const pipeline = [
+    {
+      $group:
+        {
+          _id: "$userId",
+          watchHours: {
+            $sum: "$creatorVideoStat.dailyWatchTimeSec",
+          },
+        },
+    },
+  ];
+
+  const docs = await CreatorEarnSummary.aggregate(pipeline);
+  const bulkUpdateOps = [];
+
+  if (docs.length) {
+    docs.forEach((doc) => {
+      console.log(doc.watchHours);
+
+
+      const updateOperation = {
+        updateOne: {
+          filter: {
+            "userId": new ObjectId(doc._id),
+           },
+          update: {
+            $set: {
+              "creatorVideoStat.totalWatchTimeSec": doc.watchHours
+              ,
+            },
+          },
+          upsert: true,
+        },
+      };
+
+      bulkUpdateOps.push(updateOperation);
+     console.log(JSON.stringify(updateOperation));
+    });
+  }
+
+ //const result = await UserStats.bulkWrite(bulkUpdateOps);
+ console.log(JSON.stringify(result));
