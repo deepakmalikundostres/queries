@@ -1,0 +1,24 @@
+[
+  {
+    $group:
+      /**
+       * _id: The id of the group.
+       * fieldN: The first field name.
+       */
+      {
+        _id: "$userId",
+        watchHours: {
+          $sum: "$creatorVideoStat.dailyWatchTimeSec",
+        },
+      },
+  },
+  {
+    $match:
+      /**
+       * query: The query in MQL.
+       */
+      {
+        _id: ObjectId("64007b9db964234d68314b04"),
+      },
+  },
+]
