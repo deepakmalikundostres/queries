@@ -1,0 +1,68 @@
+  await UserStats.updateOne(
+    {
+      userId: new ObjectId(creatorId)
+    },
+    {
+      $inc: {
+        "creatorViewsStat.daily": incViewAmount,
+        "creatorViewsStat.total": incViewAmount
+      }
+    },
+    {
+      upsert: true 
+    }
+  );
+};
+
+
+const getDashboardMetaData = async () => {
+
+
+  const pipeline = [
+    {
+      $match:
+        {
+          txnSource: "CREATE_TO_EARN",
+        },
+    },
+    {
+      $group:
+        {
+          _id: "$user",
+          amount: {
+            $sum: "$amount",
+          },
+        },
+    },
+  ]
+
+  const docs = await WalletTransaction.aggregate(pipeline);
+  const bulkUpdateOps = [];
+
+  if (docs.length) {
+    docs.forEach((doc) => {
+      console.log(doc.amount);
+
+
+      const updateOperation = {
+        updateOne: {
+          filter: {
+            "userId": new ObjectId(doc._id),
+           },
+          update: {
+            $set: {
+              "creatorCoinEarnedTotal.videoWatch": doc.amount
+              ,
+            },
+          },
+          upsert: true,
+        },
+      };
+
+      bulkUpdateOps.push(updateOperation);
+     console.log(JSON.stringify(updateOperation));
+    });
+  }
+
+ const result = await UserStats.bulkWrite(bulkUpdateOps);
+ console.log(JSON.stringify(result));
