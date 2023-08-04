@@ -1,0 +1,24 @@
+  await SearchCustomResult.updateMany(
+    { "_id": ObjectId("6450e7e700094422aa6ef995") },
+    { "$set": { "lang_id": ObjectId("63e4dbc0abfab507559d26b7") } }
+);
+
+await SearchCustomResult.updateMany(
+    { "_id": ObjectId("6450e7e700094422aa6ef997") },
+    { "$set": { "lang_id": ObjectId("63e4dbe9abfab507559d26b8") } }
+);
+
+await SearchCustomResult.updateMany(
+    { "_id": ObjectId("6450c91100094422aa6ef994") },
+    { "$set": { "lang_id": ObjectId("63e4dbf0abfab507559d26b9") } }
+);
+
+await SearchCustomResult.updateMany(
+    { "_id": ObjectId("6450e7e700094422aa6ef996") },
+    { "$set": { "lang_id": ObjectId("63e4dbf5abfab507559d26ba") } }
+);
+
+await SearchCustomResult.updateMany(
+    { "_id": ObjectId("6450e7e700094422aa6ef998") },
+    { "$set": { "lang_id": ObjectId("63e4deebf4d51d6bd7871ccd") } }
+);
