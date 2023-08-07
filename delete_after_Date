@@ -1,0 +1,7 @@
+ startDayIst = moment("2023-08-02").tz("Asia/Kolkata").startOf('day').add(0,'days').add(5,'hours').add(30,'minutes').format();
+  console.log(startDayIst);
+  await CreatorEarnSummary.deleteMany({
+    istTimestamp: {
+      $gte: new Date(startDayIst)
+    }
+  });
