@@ -1,0 +1,208 @@
+let i=0;
+let startDay;
+let endDay;
+let startDayIst;
+while(!startDay || new Date(startDay) < new Date("2023-08-05")){
+    startDay = moment("2023-08-02").tz("Asia/Kolkata").startOf('day').add(i,'days').format();
+    endDay = moment("2023-08-02").tz("Asia/Kolkata").endOf('day').add(i,'days').format();
+    startDayIst = moment("2023-08-02").tz("Asia/Kolkata").startOf('day').add(i,'days').add(5,'hours').add(30,'minutes').format(); 
+    console.log("date " + startDayIst);  
+   
+    const pipeline = [
+      {
+        $match: {
+          createdAt: {
+            $gte: new Date(startDay),
+            $lte: new Date(endDay),
+          },
+        },
+      },
+      {
+        $group: {
+          _id: "$video",
+          views: {
+            $sum: 1,
+          },
+          secWatched: {
+            $sum: "$secWatched",
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "ftv_videos",
+          localField: "_id",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $match: {
+                creator: {
+                  $exists: true,
+                },
+              },
+            },
+            {
+              $project: {
+                creator: 1,
+                _id: 0,
+              },
+            },
+          ],
+          as: "result",
+        },
+      },
+      {
+        $unwind: {
+          path: "$result",
+        },
+      },
+      {
+        $group: {
+          _id: "$result.creator",
+          secWatched: {
+            $sum: "$secWatched",
+          },
+          views: {
+            $sum: "$views",
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          creator: "$_id",
+          secWatched: 1,
+          views: 1,
+        },
+      },
+      {
+        $lookup: {
+          from: "wallet_transactions",
+          let: {
+            userId: "$creator",
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    {
+                      $eq: ["$user", "$$userId"],
+                    },
+                    {
+                      $eq: [
+                        "$txnSource",
+                        "CREATE_TO_EARN",
+                      ],
+                    },
+                    {
+                      $gte: [
+                        "$createdAt",
+                        new Date(startDay),
+                      ],
+                    },
+                    {
+                      $lte: [
+                        "$createdAt",
+                        new Date(endDay),
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+            {
+              $group: {
+                _id: null,
+                amount: {
+                  $sum: "$amount",
+                },
+              },
+            },
+          ],
+          as: "result",
+        },
+      },
+      {
+        $project: {
+          secWatched: 1,
+          views: 1,
+          creator: 1,
+          result: {
+            $cond: {
+              if: {
+                $eq: [
+                  {
+                    $size: "$result",
+                  },
+                  0,
+                ],
+              },
+              then: [
+                {
+                  amount: 0,
+                },
+              ],
+              else: "$result",
+            },
+          },
+        },
+      },
+      {
+        $unwind: {
+          path: "$result",
+        },
+      },
+      {
+        $project: {
+          creator: 1,
+          secWatched: 1,
+          views: 1,
+          coins: "$result.amount",
+          'istTimestamp': new Date(startDayIst)
+        },
+      },
+   ]
+    let [backupDocs, docs] = await Promise.all([ VideoWatchLogBackup.aggregate(pipeline), VideoWatchLog.aggregate(pipeline)]);
+    //console.log(backupDocs);
+    if(docs.length) {
+        docs.map( ( doc )=>{
+            const index = backupDocs.findIndex( ( item )=>{
+                if(item.creator === doc.creator) {
+                  return item.creator == doc.creator;
+                }
+            });
+            if(index != -1){
+              console.log(index);
+                backupDocs[index].views += doc.views;
+                backupDocs[index].coins += doc.coins;
+                backupDocs[index].secWatched+= doc.secWatched
+
+            }
+            else {
+                backupDocs.push(doc);
+            }
+        })
+    }
+    const bulkInsertOps = [];
+    for(const backupDoc of backupDocs){
+     
+
+      const insertOperation = {
+        insertOne: {
+            document: {
+                "userId": new ObjectId(backupDoc.creator),
+                "creatorVideoStat.dailyWatchTimeSec": backupDoc.secWatched,
+                "creatorViewsStat.daily": backupDoc.views,
+                "creatorCoinEarnedDaily.videoWatch": backupDoc.coins,
+                "istTimestamp": backupDoc.istTimestamp
+            }
+        }
+    };
+    bulkInsertOps.push(insertOperation)
+
+  }
+   await CreatorEarnSummary.bulkWrite(bulkInsertOps); 
+    //await CreatorEarnSummary.insertMany(backupDocs);
+    i++;
+}
